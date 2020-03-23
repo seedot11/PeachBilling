@@ -1,5 +1,6 @@
-﻿using Billing.API.Models;
-using Billing.API.Services;
+﻿using Billing.Core;
+using Billing.Core.Models;
+using Billing.Core.Services;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -41,6 +42,23 @@ namespace Billing.API.UnitTests.Services
             }
         }
 
+        [Fact]
+        public void IfIbuyOnePotterBookAndThreeOthers_NoDiscounts()
+        {
+            using (var context = new BillingContext(options))
+            {
+                var service = GetService(context);
+
+                var skus = new[] { "potter1", "somethingelse", "somethingelse", "somethingelse" };
+
+                var results = service.CalculateCost(skus);
+
+                Assert.Equal(4, results.Count());
+
+                // Check for no discounted items
+                Assert.True(!results.Any(x => x.Discount > 0));
+            }
+        }
 
         [Fact]
         public void GivenHarryPotterDiscounts_WhenIPurchase5HarryPotterBooks_Then25PercentDiscountIsApplied ()
@@ -152,6 +170,19 @@ namespace Billing.API.UnitTests.Services
             }
         }
 
+        [Fact]
+        public void TryAndBuyABookWhichDoesntExist()
+        {
+            using (var context = new BillingContext(options))
+            {
+                var service = GetService(context);
+
+                var skus = new[] { "potter1", "potter2", "potter8" };
+
+                // potter8 doesn't exist: throw invalid operation.
+                Assert.Throws<InvalidOperationException>(() => service.CalculateCost(skus));
+            }
+        }
 
         private CostCalculationService GetService(BillingContext context)
         {
